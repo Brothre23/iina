@@ -1580,7 +1580,7 @@ class PlayerCore: NSObject {
     let progress = Utility.playbackProgressFromWatchLater(path.md5)
     info.infoQueue.async {  // Running in the background thread
       self.info.cachedVideoDurationAndProgress[path] = (
-        duration: dict?["duration"] as? Double,
+        duration: dict?["@iina_duration"] as? Double,
         progress: progress?.second
       )
       self.info.cachedMetadata[path] = (
