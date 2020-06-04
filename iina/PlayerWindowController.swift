@@ -56,6 +56,8 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
     .doubleClickAction,
     .horizontalScrollAction,
     .verticalScrollAction,
+    .playlistShowMetadata,
+    .playlistShowMetadataInMusicMode,
   ]
   
   override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
@@ -102,6 +104,10 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
     case PK.doubleClickAction.rawValue:
       if let newValue = change[.newKey] as? Int {
         doubleClickAction = Preference.MouseClickAction(rawValue: newValue)!
+      }
+    case PK.playlistShowMetadata.rawValue, PK.playlistShowMetadataInMusicMode.rawValue:
+      if player.isPlaylistVisible {
+        player.mainWindow.playlistView.playlistTableView.reloadData()
       }
     default:
       return
@@ -163,26 +169,26 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
     addObserver(to: .default, forName: .iinaMediaTitleChanged, object: player) { [unowned self] _ in
         self.updateTitle()
     }
-    
+
     rightLabel.mode = Preference.bool(for: .showRemainingTime) ? .remaining : .duration
-    
+
     updateVolume()
-    
+
     observedPrefKeys.forEach { key in
       UserDefaults.standard.addObserver(self, forKeyPath: key.rawValue, options: .new, context: nil)
     }
-    
+
     addObserver(to: .default, forName: .iinaFileLoaded, object: player) { [unowned self] _ in
       self.updateTitle()
     }
-    
+
     NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: nil, using: { [unowned self] _ in
       if Preference.bool(for: .pauseWhenGoesToSleep) {
         self.player.pause()
       }
     })
   }
-  
+
   deinit {
     ObjcUtils.silenced {
       for key in self.observedPrefKeys {
@@ -190,7 +196,7 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
       }
     }
   }
-  
+
   internal func addObserver(to notificationCenter: NotificationCenter, forName name: Notification.Name, object: Any? = nil, using block: @escaping (Notification) -> Void) {
     notificationCenter.addObserver(forName: name, object: object, queue: .main, using: block)
   }
@@ -263,11 +269,11 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
       performMouseAction(doubleClickAction)
     }
   }
-  
+
   override func rightMouseUp(with event: NSEvent) {
     performMouseAction(Preference.enum(for: .rightClickAction))
   }
-  
+
   override func otherMouseUp(with event: NSEvent) {
     if event.type == .otherMouseUp {
       performMouseAction(Preference.enum(for: .middleClickAction))
@@ -275,7 +281,7 @@ class PlayerWindowController: NSWindowController, NSWindowDelegate {
       super.otherMouseUp(with: event)
     }
   }
-  
+
   internal func performMouseAction(_ action: Preference.MouseClickAction) {
     switch action {
     case .pause:
